@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const API_URL = 'http://https://livesta-t0yd.onrender.com';
+const API_URL = 'https://livesta-t0yd.onrender.com';
 
 const styles = `
 * { box-sizing: border-box; }

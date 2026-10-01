@@ -37,7 +37,7 @@ export default function BuyerDashboard({
       setLivestockError('');
 
       try {
-        const response = await fetch('http://https://livesta-t0yd.onrender.com/livestock');
+        const response = await fetch('https://livesta-t0yd.onrender.com/livestock');
         const data = await response.json();
 
         if (!response.ok) {
@@ -48,7 +48,7 @@ export default function BuyerDashboard({
           (data.livestock || []).map((animal) => ({
             ...animal,
             image: animal.image_url
-              ? `http://https://livesta-t0yd.onrender.com${animal.image_url}`
+              ? `https://livesta-t0yd.onrender.com${animal.image_url}`
               : '',
           }))
         );
@@ -69,7 +69,7 @@ export default function BuyerDashboard({
     try {
       const token = localStorage.getItem('livestaToken');
 
-      const response = await fetch('http://https://livesta-t0yd.onrender.com/orders', {
+      const response = await fetch('https://livesta-t0yd.onrender.com/orders', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -112,7 +112,7 @@ export default function BuyerDashboard({
       const token = localStorage.getItem('livestaToken');
 
       const response = await fetch(
-        `http://https://livesta-t0yd.onrender.com/orders/${orderId}/cancel`,
+        `https://livesta-t0yd.onrender.com/orders/${orderId}/cancel`,
         {
           method: 'PATCH',
           headers: {
@@ -178,7 +178,7 @@ export default function BuyerDashboard({
       }, []);
 
       for (const item of groupedItems) {
-        const response = await fetch('http://https://livesta-t0yd.onrender.com/orders', {
+        const response = await fetch('https://livesta-t0yd.onrender.com/orders', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

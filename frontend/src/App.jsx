@@ -187,7 +187,7 @@ useEffect(() => {
 
           try {
             const response = await fetch(
-              'http://https://livesta-t0yd.onrender.com/auth/reset-password',
+              'https://livesta-t0yd.onrender.com/auth/reset-password',
               {
                 method: 'POST',
                 headers: {
