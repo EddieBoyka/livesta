@@ -5,11 +5,12 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from '../database/database.service.js';
 import { randomBytes, createHash } from 'node:crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class AuthService {
@@ -140,103 +141,106 @@ export class AuthService {
       },
     };
   }
-async forgotPassword({ email }) {
-  if (!email) {
-    throw new BadRequestException('Email is required');
-  }
 
-  await this.ensurePasswordResetTable();
+  async forgotPassword({ email }) {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
 
-  const normalizedEmail = email.toLowerCase().trim();
+    await this.ensurePasswordResetTable();
 
-  const result = await this.database.pool.query(
-    'SELECT id FROM users WHERE email = $1',
-    [normalizedEmail],
-  );
+    const normalizedEmail = email.toLowerCase().trim();
 
-  // Use the same response whether the account exists or not.
-  const successMessage =
-    'If an account exists for this email, password reset instructions will be sent.';
+    const result = await this.database.pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [normalizedEmail],
+    );
 
-  if (result.rows.length === 0) {
-    return { message: successMessage };
-  }
+    // Use the same response whether the account exists or not.
+    const successMessage =
+      'If an account exists for this email, password reset instructions will be sent.';
 
-  const userId = result.rows[0].id;
-  const token = randomBytes(32).toString('hex');
+    if (result.rows.length === 0) {
+      return { message: successMessage };
+    }
 
-  const tokenHash = createHash('sha256')
-    .update(token)
-    .digest('hex');
+    const userId = result.rows[0].id;
 
-  await this.database.pool.query(
-    `UPDATE password_reset_tokens
-     SET used_at = CURRENT_TIMESTAMP
-     WHERE user_id = $1 AND used_at IS NULL`,
-    [userId],
-  );
+    const token = randomBytes(32).toString('hex');
 
-  await this.database.pool.query(
-    `INSERT INTO password_reset_tokens
-     (user_id, token_hash, expires_at)
-     VALUES ($1, $2, NOW() + INTERVAL '15 minutes')`,
-    [userId, tokenHash],
-  );
+    const tokenHash = createHash('sha256')
+      .update(token)
+      .digest('hex');
 
-  const frontendUrl =
-    process.env.FRONTEND_URL || 'http://localhost:5173';
+    await this.database.pool.query(
+      `UPDATE password_reset_tokens
+       SET used_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND used_at IS NULL`,
+      [userId],
+    );
 
-  const resetUrl = new URL(
-    '/reset-password',
-    frontendUrl,
-  );
+    await this.database.pool.query(
+      `INSERT INTO password_reset_tokens
+       (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '15 minutes')`,
+      [userId, tokenHash],
+    );
 
-  resetUrl.searchParams.set('email', normalizedEmail);
-  resetUrl.searchParams.set('token', token);
+    const frontendUrl =
+      process.env.FRONTEND_URL || 'http://localhost:5173';
 
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+    const resetUrl = new URL(
+      '/reset-password',
+      frontendUrl,
+    );
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
-    to: normalizedEmail,
-    subject: 'Reset your LIVESTA password',
-    text: `You requested a password reset for your LIVESTA account.
+    resetUrl.searchParams.set('email', normalizedEmail);
+    resetUrl.searchParams.set('token', token);
+
+    // Send the password reset email through Resend.
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: [normalizedEmail],
+      subject: 'Reset your LIVESTA password',
+
+      text: `You requested a password reset for your LIVESTA account.
 
 Click this link to reset your password:
+
 ${resetUrl.toString()}
 
 This link expires in 15 minutes. If you did not request this, you can ignore this email.`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; color: #263b30;">
-        <h1 style="color: #174a32;">LIVESTA</h1>
-        <h2>Reset your password</h2>
-        <p>We received a request to reset your LIVESTA account password.</p>
-        <p>Click the button below to choose a new password.</p>
-        <p style="margin: 30px 0;">
-          <a
-            href="${resetUrl.toString()}"
-            style="background: #1d7047; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;"
-          >
-            Reset Password
-          </a>
-        </p>
-        <p>This link expires in 15 minutes.</p>
-        <p>If you did not request this, you can safely ignore this email.</p>
-      </div>
-    `,
-  });
 
-  return { message: successMessage };
-}
- 
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; color: #263b30;">
+          <h1 style="color: #174a32;">LIVESTA</h1>
+
+          <h2>Reset your password</h2>
+
+          <p>We received a request to reset your LIVESTA account password.</p>
+
+          <p>Click the button below to choose a new password.</p>
+
+          <p style="margin: 30px 0;">
+            <a
+              href="${resetUrl.toString()}"
+              style="background: #1d7047; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;"
+            >
+              Reset Password
+            </a>
+          </p>
+
+          <p>This link expires in 15 minutes.</p>
+
+          <p>If you did not request this, you can safely ignore this email.</p>
+        </div>
+      `,
+    });
+
+    return { message: successMessage };
+  }
 
   async resetPassword({ email, token, newPassword }) {
     if (!email || !token || !newPassword) {
@@ -254,9 +258,11 @@ This link expires in 15 minutes. If you did not request this, you can ignore thi
     await this.ensurePasswordResetTable();
 
     const normalizedEmail = email.toLowerCase().trim();
+
     const tokenHash = createHash('sha256')
       .update(token)
       .digest('hex');
+
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     const client = await this.database.pool.connect();
