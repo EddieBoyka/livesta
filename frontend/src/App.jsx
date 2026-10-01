@@ -187,7 +187,7 @@ useEffect(() => {
 
           try {
             const response = await fetch(
-              'http://localhost:3000/auth/reset-password',
+              'http://https://livesta-t0yd.onrender.com/auth/reset-password',
               {
                 method: 'POST',
                 headers: {

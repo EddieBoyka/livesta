@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API = 'http://localhost:3000';
+const API = 'http://https://livesta-t0yd.onrender.com';
 
 export default function SellerDashboard({ onHome }) {
   const token = localStorage.getItem('livestaToken');

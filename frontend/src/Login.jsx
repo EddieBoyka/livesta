@@ -35,7 +35,7 @@ export default function Login({
     try {
       if (isForgotPassword) {
         const response = await fetch(
-          'http://localhost:3000/auth/forgot-password',
+          'http://https://livesta-t0yd.onrender.com/auth/forgot-password',
           {
             method: 'POST',
             headers: {
@@ -67,8 +67,8 @@ export default function Login({
       }
 
       const endpoint = isRegistering
-        ? 'http://localhost:3000/auth/register'
-        : 'http://localhost:3000/auth/login';
+        ? 'http://https://livesta-t0yd.onrender.com/auth/register'
+        : 'http://https://livesta-t0yd.onrender.com/auth/login';
 
       const body = isRegistering
         ? { fullName, email, password, role }

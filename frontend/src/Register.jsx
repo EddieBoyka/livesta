@@ -37,7 +37,7 @@ export default function Register({
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/register', {
+      const response = await fetch('http://https://livesta-t0yd.onrender.com/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
